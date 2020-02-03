@@ -31,24 +31,26 @@ class DecimalEncoder(json.JSONEncoder):
         return super(DecimalEncoder, self).default(o)
 
 class talk_with_dynamo():
-    def __init__(self, table, boto_session, region='us-east-1'):
+    def __init__(self, table, boto_session, region='us-east-1', check_index=False):
         self.boto_session = boto_session
         self.dynamodb = self.boto_session.resource('dynamodb', region_name=region)
         self.table = self.dynamodb.Table(table)
+        self.check_index = check_index
 
         self.boto_client = boto3.client('dynamodb') # Legacy - Used for legacy insert functionality - Remove once session can be used
                 # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/dynamodb.html
 
     def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False):
-        # When adding a global secondary index to an existing table, you cannot query the index until it has been backfilled.
-        # This portion of the script waits until the index is in the “ACTIVE” status, indicating it is ready to be queried.
-        while True:
-            if not self.table.global_secondary_indexes or self.table.global_secondary_indexes[0]['IndexStatus'] != 'ACTIVE':
-                print('[{}]  Waiting for index to backfill...'.format('INFO'))
-                sleep(5)
-                self.table.reload()
-            else:
-                break
+        if self.check_index:
+            # When adding a global secondary index to an existing table, you cannot query the index until it has been backfilled.
+            # This portion of the script waits until the index is in the “ACTIVE” status, indicating it is ready to be queried.
+            while True:
+                if not self.table.global_secondary_indexes or self.table.global_secondary_indexes[0]['IndexStatus'] != 'ACTIVE':
+                    print('[{}]  Waiting for index to backfill...'.format('INFO'))
+                    sleep(5)
+                    self.table.reload()
+                else:
+                    break
 
         if index:
             response = self.table.query(

@@ -1,3 +1,5 @@
+import json
+
 class talk_with_cognito():
     def __init__(self, boto_client, cognito_user_pool_id, debug=False):
         self.boto_client = boto_client
@@ -9,7 +11,7 @@ class talk_with_cognito():
             Username=cognito_user_id
         )
 
-        if debug:
+        if self.debug:
             print("Cognito Response: {}".format(json.dumps(cognito_response,  default=str)))
 
         cognito_response        = json.loads(json.dumps(cognito_response,  default=str))
