@@ -1,7 +1,8 @@
 class talk_with_cognito():
-    def __init__(self, boto_client, cognito_user_pool_id):
+    def __init__(self, boto_client, cognito_user_pool_id, debug=False):
         self.boto_client = boto_client
         self.cognito_user_pool_id = cognito_user_pool_id
+        self.debug = debug
     def get_user_email(self, cognito_user_id):
         cognito_response = self.boto_client.admin_get_user(
             UserPoolId=self.cognito_user_pool_id,
