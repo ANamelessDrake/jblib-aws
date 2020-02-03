@@ -37,9 +37,6 @@ class talk_with_dynamo():
         self.table = self.dynamodb.Table(table)
         self.check_index = check_index
 
-        self.boto_client = boto3.client('dynamodb') # Legacy - Used for legacy insert functionality - Remove once session can be used
-                # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/dynamodb.html
-
     def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False):
         if self.check_index:
             # When adding a global secondary index to an existing table, you cannot query the index until it has been backfilled.
