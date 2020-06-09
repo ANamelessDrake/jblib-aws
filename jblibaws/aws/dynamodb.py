@@ -92,3 +92,12 @@ class talk_with_dynamo():
     def insert(self, payload):
         response = self.table.put_item(Item=payload)
         return response
+
+    def delete(self, partition_key_attribute, sorting_key_attribute):
+        response = self.table.delete_item(
+            Key={
+               'UniqueID': partition_key_attribute,
+               'Category': sorting_key_attribute
+            }
+        )
+        return response
