@@ -89,6 +89,26 @@ class talk_with_dynamo():
         )
         return response
 
+    def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None):
+        key = {}
+        key['UniqueID'] = partition_key_attribute
+
+        if sorting_key_attribute:
+            key['Category'] = sorting_key_attribute
+
+        response = self.table.update_item(
+            Key=key,
+            UpdateExpression="set #k = :a",
+            ExpressionAttributeNames = {
+                "#k" : update_key
+            },
+            ExpressionAttributeValues={
+                ':a': update_attribute
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+        return response
+
     def insert(self, payload):
         response = self.table.put_item(Item=payload)
         return response
