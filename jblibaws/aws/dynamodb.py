@@ -95,15 +95,14 @@ class talk_with_dynamo():
 	def batchGetItem(self, batch_keys):
 		"""
 		Gets a batch of items from Amazon DynamoDB. Batches can contain keys from
-		more than one table.
+		more than one table.\n
 		When Amazon DynamoDB cannot process all items in a batch, a set of unprocessed
 		keys is returned. This function uses an exponential backoff algorithm to retry
 		getting the unprocessed keys until all are retrieved or the specified
-		number of tries is reached.
-		:param batch_keys: The set of keys to retrieve. A batch can contain at most 100
-						keys. Otherwise, Amazon DynamoDB returns an error.
-		:return: The dictionary of retrieved items grouped under their respective
-				table names.
+		number of tries is reached.\n
+		:param batch_keys: The set of keys to retrieve. A batch can contain at most 100 keys. Otherwise, Amazon DynamoDB returns an error.\n
+		:return: The dictionary of retrieved items grouped under their respective table names.\n\n
+		Input Object Shape Example: {'tableName': {'Keys': [{'PartitionKey': 'PartitionKeyAttribute', 'SortingKey': 'SortingKey'}]}}
 		"""
 		tries = 0
 		max_tries = 5
@@ -133,6 +132,9 @@ class talk_with_dynamo():
 		return retrieved
 
 	def update(self, partition_key_attribute, sorting_key_attribute, update_key, update_attribute):
+		"""
+		This method is deprecated and should not be used. 
+		"""
 		response = self.table.update_item(
 			Key={
 			'UniqueID': partition_key_attribute,
@@ -150,14 +152,18 @@ class talk_with_dynamo():
 		return response
 
 	def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None):
+		"""
+		Edits an existing item's attributes, or adds a new item to the table if it does not already exist. You can also perform a conditional update on an existing item (insert a new attribute name-value pair if it doesn't exist, or replace an existing name-value pair if it has certain expected attribute values).
+		updateV2(partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None)
+		"""
 		key = {}
 		key['UniqueID'] = partition_key_attribute
 
 		if sorting_key_attribute:
 			key['Category'] = sorting_key_attribute
 
-		if conditionExpression and conditionCheck:
-			try:
+		try:
+			if conditionExpression and conditionCheck:
 				response = self.table.update_item(
 					Key=key,
 					UpdateExpression="set #k = :a",
@@ -170,28 +176,28 @@ class talk_with_dynamo():
 					ConditionExpression=Attr(conditionExpression).eq(conditionCheck),
 					ReturnValues="UPDATED_NEW"
 				)
-			except Exception as e:
-				if "ConditionalCheckFailedException" in str(e):
-					response = {'error': 'ConditionalCheckFailedException'}
-				else:
-					response = {'error': e}
-		else: 
-			response = self.table.update_item(
-				Key=key,
-				UpdateExpression="set #k = :a",
-				ExpressionAttributeNames = {
-					"#k" : update_key
-				},
-				ExpressionAttributeValues={
-					':a': update_attribute
-				},
-				ReturnValues="UPDATED_NEW"
-			)
-
+			else: 
+				response = self.table.update_item(
+					Key=key,
+					UpdateExpression="set #k = :a",
+					ExpressionAttributeNames = {
+						"#k" : update_key
+					},
+					ExpressionAttributeValues={
+						':a': update_attribute
+					},
+					ReturnValues="UPDATED_NEW"
+				)
+		except Exception as e:
+			if "ConditionalCheckFailedException" in str(e):
+				response = {'error': 'ConditionalCheckFailedException'}
+			else:
+				response = {'error': str(e)}
 		return response
 
 	def insert(self, payload):
 		response = self.table.put_item(Item=payload)
+
 		return response
 
 	def delete(self, partition_key_attribute, sorting_key_attribute=False):
