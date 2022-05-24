@@ -38,7 +38,19 @@ class talk_with_dynamo():
 		self.table = self.dynamodb.Table(table)
 		self.check_index = check_index
 
-	def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False):
+	def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False):
+		"""
+		Query a DynamoDB Table.\n
+		queryOperator can now be set to one of the following: gt, gte, lt, lte, between
+		\tgt: greater than (>)
+		\tgte: greater than or equal to (>=)
+		\tlt: less than (<)
+		\tlte: less than or equal to (<=)
+		\tbetween: condition where the attribute is greater than or equal to the low value and less than or equal to the high value.
+
+		betweenValue: Expecting a tuple of two values and is intended to be used with the between queryOperator
+		"""
+
 		if self.check_index:
 			# When adding a global secondary index to an existing table, you cannot query the index until it has been backfilled.
 			# This portion of the script waits until the index is in the “ACTIVE” status, indicating it is ready to be queried.
@@ -60,10 +72,39 @@ class talk_with_dynamo():
 				IndexName=index,
 				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).eq(sorting_key_attribute),
 			)
-		elif partition_key and partition_key_attribute and sorting_key and sorting_key_attribute:
+		elif partition_key and partition_key_attribute and sorting_key and sorting_key_attribute and not queryOperator:
 			response = self.table.query(
 				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).eq(sorting_key_attribute),
 			)
+		elif partition_key and partition_key_attribute and sorting_key and sorting_key_attribute and queryOperator and not betweenValue:
+			if queryOperator == 'gt': 
+				response = self.table.query(
+					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).gt(sorting_key_attribute),
+				)
+			elif queryOperator == 'gte': 
+				response = self.table.query(
+					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).gte(sorting_key_attribute),
+				)
+			elif queryOperator == 'lt': 
+				response = self.table.query(
+					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).lt(sorting_key_attribute),
+				)
+			elif queryOperator == 'lte': 
+				response = self.table.query(
+					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).lte(sorting_key_attribute),
+				)
+			else:
+				response = ""
+
+		elif partition_key and partition_key_attribute and sorting_key and queryOperator and betweenValue:
+			if queryOperator == 'between' and betweenValue: 
+				lowValue, highValue = betweenValue
+
+				response = self.table.query(
+					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).between(lowValue, highValue),
+				)
+			else:
+				response = ""
 		elif partition_key and partition_key_attribute:
 			response = self.table.query(
 				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute),
