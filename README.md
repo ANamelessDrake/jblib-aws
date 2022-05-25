@@ -56,4 +56,17 @@ More of my projects can be found here: [http://justbard.com](http://justbard.com
 
 ```
 
+`from jblibaws import get_secret`
+
+```
+    function get_secret(secret_name, region='us-east-1')
+
+        Example:
+
+        Functions:
+            get_secret(secret_name)
+            - Returns decoded secret from AWS Secrets Manager
+
+```
+
 ### More Documentation To Come
