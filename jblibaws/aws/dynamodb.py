@@ -192,16 +192,23 @@ class talk_with_dynamo():
 		)
 		return response
 
-	def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None):
+	def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None, sorting_key=None):
 		"""
 		Edits an existing item's attributes, or adds a new item to the table if it does not already exist. You can also perform a conditional update on an existing item (insert a new attribute name-value pair if it doesn't exist, or replace an existing name-value pair if it has certain expected attribute values).
-		updateV2(partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None)
+		\n
+		To perform conditional checks against an update call set conditionExpression and conditionCheck to the attribute field and attribute value respectfully.\n
+		\ti.e. conditionExpression='version', conditionCheck=0
+		\n
+		updateV2(partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None, sorting_key)
 		"""
 		key = {}
 		key['UniqueID'] = partition_key_attribute
 
 		if sorting_key_attribute:
-			key['Category'] = sorting_key_attribute
+			if sorting_key:
+				key[sorting_key] = sorting_key_attribute
+			else:
+				key['Category'] = sorting_key_attribute
 
 		try:
 			if conditionExpression and conditionCheck:
