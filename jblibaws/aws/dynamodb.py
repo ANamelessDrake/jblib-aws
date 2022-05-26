@@ -248,12 +248,15 @@ class talk_with_dynamo():
 
 		return response
 
-	def delete(self, partition_key_attribute, sorting_key_attribute=False):
+	def delete(self, partition_key_attribute, sorting_key_attribute=False, sorting_key=None):
 		key = {}
 		key['UniqueID'] = partition_key_attribute
 
 		if sorting_key_attribute:
-			key['Category'] = sorting_key_attribute
+			if sorting_key:
+				key[sorting_key] = sorting_key_attribute
+			else:
+				key['Category'] = sorting_key_attribute
 		
 		response = self.table.delete_item(
 			Key=key

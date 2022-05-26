@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(name='jblibaws',
-                version='1.0.12',
+                version='1.0.13',
                 description='JustBard\'s Python based AWS Utilities',
                 long_description=long_description,
                 long_description_content_type="text/markdown",
