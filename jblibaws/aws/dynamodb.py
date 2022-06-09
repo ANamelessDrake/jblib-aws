@@ -204,7 +204,7 @@ class talk_with_dynamo():
 		key = {}
 		key['UniqueID'] = partition_key_attribute
 
-		if sorting_key_attribute:
+		if sorting_key_attribute  or sorting_key_attribute == 0:
 			if sorting_key:
 				key[sorting_key] = sorting_key_attribute
 			else:
