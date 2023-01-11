@@ -248,9 +248,20 @@ class talk_with_dynamo():
 
 		return response
 
-	def delete(self, partition_key_attribute, sorting_key_attribute=False, sorting_key=None):
+	def delete(self, partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None):
+		"""
+		Deletes items.
+		\n
+		If no partition key is specified, a partition key of 'UniqueID' is assumed. 
+		\n
+		delete(partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None)
+		"""
 		key = {}
-		key['UniqueID'] = partition_key_attribute
+
+		if partition_key:
+			key[partition_key] = partition_key_attribute
+		else:
+			key['UniqueID'] = partition_key_attribute
 
 		if sorting_key_attribute or sorting_key_attribute == 0:
 			if sorting_key:
@@ -262,3 +273,17 @@ class talk_with_dynamo():
 			Key=key
 		)
 		return response
+
+	def scan(self):
+		"""
+		Returns all items from the table as an array.
+		\n
+		scan()
+		"""
+		response = self.table.scan()
+		data = response['Items']
+
+		while 'LastEvaluatedKey' in response:
+			response = self.table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+			data.extend(response['Items'])
+		return data

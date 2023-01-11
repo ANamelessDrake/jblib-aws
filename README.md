@@ -39,6 +39,10 @@ More of my projects can be found here: [http://justbard.com](http://justbard.com
 
             update_response = dynamo.updateV2(partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None)
 
+            delete_response = dynamo.delete(partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None)
+
+            scan_results = dynamo.scan()
+
 ```
 
 ---
