@@ -43,6 +43,8 @@ More of my projects can be found here: [http://justbard.com](http://justbard.com
 
             scan_results = dynamo.scan()
 
+            dynamo.clearTable() ## Delete all entries in a table -- Use with caution
+
 ```
 
 ---

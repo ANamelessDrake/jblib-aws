@@ -1,7 +1,7 @@
 import json
 import time
 import boto3
-from datetime import datetime
+import datetime
 from decimal import Decimal
 from time import sleep
 from boto3.dynamodb.conditions import Key, Attr
@@ -27,7 +27,7 @@ class DecimalEncoder(json.JSONEncoder):
 			for k in o.iterkeys():
 				o[k] = self.default(o[k])
 			return o
-		elif isinstance(o, (datetime.date, datetime)):
+		elif isinstance(o, (datetime.date, datetime.datetime)):
 			return o.isoformat()
 		return super(DecimalEncoder, self).default(o)
 
@@ -287,3 +287,29 @@ class talk_with_dynamo():
 			response = self.table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
 			data.extend(response['Items'])
 		return data
+
+	def clearTable(self):
+		"""This will clear all entries from the table... Use with caution!!!"""
+
+		tableKeyNames = [key.get("AttributeName") for key in self.table.key_schema]
+
+		#Only retrieve the keys for each item in the table (minimize data transfer)
+		projectionExpression = ", ".join('#' + key for key in tableKeyNames)
+		expressionAttrNames = {'#'+key: key for key in tableKeyNames}
+		
+		counter = 0
+		page = self.table.scan(ProjectionExpression=projectionExpression, ExpressionAttributeNames=expressionAttrNames)
+		with self.table.batch_writer() as batch:
+			while page["Count"] > 0:
+				counter += page["Count"]
+				# Delete items in batches
+				for itemKeys in page["Items"]:
+					batch.delete_item(Key=itemKeys)
+				# Fetch the next page
+				if 'LastEvaluatedKey' in page:
+					page = self.table.scan(
+						ProjectionExpression=projectionExpression, ExpressionAttributeNames=expressionAttrNames,
+						ExclusiveStartKey=page['LastEvaluatedKey'])
+				else:
+					break
+		print(f"Deleted {counter} rows...")
