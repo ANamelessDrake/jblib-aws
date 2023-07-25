@@ -14,44 +14,47 @@ More of my projects can be found here: [http://justbard.com](http://justbard.com
 
 ---
 
-`from jblibaws import talk_with_dynamo`
+### `talk_with_dynamo`
 
-```
-    class talk_with_dynamo(table, boto_session, region='us-east-1')
+A class that provides functionality for interacting with AWS DynamoDB tables. It allows you to perform various operations like querying, getting items, updating, inserting, deleting, and scanning the table.
 
-        Example:
-            table_name = "table-name"
-            boto_session = boto3.session.Session()
-            dynamo = talk_with_dynamo(table_name, boto_session) ## Generate Database Object
+```python
+class talk_with_dynamo(table, boto_session, region='us-east-1')
 
-            response = dynamo.query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False)
-            print ("Resposne: {}".format(response))
+Example:
+    table_name = "table-name"
+    boto_session = boto3.session.Session()
+    dynamo = talk_with_dynamo(table_name, boto_session) # Generate Database Object
 
-			getResponse = dynamo.getItem(partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False)
+    response = dynamo.query(partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False)
+    print("Response: {}".format(response))
 
-			batch_keys = {'tableName': {'Keys': [{'PartitionKey': 'PartitionKeyAttribute', 'SortingKey': 'SortingKey'}]}}
-			batchResponse = dynamo.batchGetItem(batch_keys)
+    getResponse = dynamo.getItem(partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False)
 
-            insert_resposne = dynamo.insert(json_object)
-            print("Insert Response: {}".format(insert_response))
+    batch_keys = {'tableName': {'Keys': [{'PartitionKey': 'PartitionKeyAttribute', 'SortingKey': 'SortingKey'}]}}
+    batchResponse = dynamo.batchGetItem(batch_keys)
 
-            update_response = dynamo.update(partition_key_attribute, sorting_key_attribute, update_key, update_attribute)
+    insert_response = dynamo.insert(json_object)
+    print("Insert Response: {}".format(insert_response))
 
-            update_response = dynamo.updateV2(partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None)
+    update_response = dynamo.update(partition_key_attribute, sorting_key_attribute, update_key, update_attribute)
 
-            delete_response = dynamo.delete(partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None)
+    update_response = dynamo.updateV2(partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None)
 
-            scan_results = dynamo.scan()
+    delete_response = dynamo.delete(partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None)
 
-            dynamo.clearTable() ## Delete all entries in a table -- Use with caution
+    scan_results = dynamo.scan(filter_expression=None, expression_attribute_values=None)
 
+    dynamo.clearTable() # Delete all entries in a table -- Use with caution
 ```
 
 ---
 
-`from jblibaws import talk_with_cognito`
+### `talk_with_cognito`
 
-```
+A class that provides functionality for interacting with AWS Cognito. It allows you to get a user's email address using their Cognito user ID.
+
+```python
     class talk_with_cognito(boto_client, cognito_user_pool_id)
 
         Example:
@@ -62,9 +65,11 @@ More of my projects can be found here: [http://justbard.com](http://justbard.com
 
 ```
 
-`from jblibaws import get_secret`
+### `get_secret`
 
-```
+A function that retrieves a decoded secret from AWS Secrets Manager.
+
+```python
     function get_secret(secret_name, region='us-east-1')
 
         Example:
@@ -74,5 +79,3 @@ More of my projects can be found here: [http://justbard.com](http://justbard.com
             - Returns decoded secret from AWS Secrets Manager
 
 ```
-
-### More Documentation To Come

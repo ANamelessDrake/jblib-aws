@@ -40,16 +40,18 @@ class talk_with_dynamo():
 
 	def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False):
 		"""
-		Query a DynamoDB Table.\n
-		queryOperator can now be set to one of the following: gt, gte, lt, lte, between
-		\tgt: greater than (>)
-		\tgte: greater than or equal to (>=)
-		\tlt: less than (<)
-		\tlte: less than or equal to (<=)
-		\tbetween: condition where the attribute is greater than or equal to the low value and less than or equal to the high value.
+        Query a DynamoDB Table.
 
-		betweenValue: Expecting a tuple of two values and is intended to be used with the between queryOperator
-		"""
+        :param partition_key: The name of the partition key attribute.
+        :param partition_key_attribute: The value of the partition key attribute to query.
+        :param sorting_key: (Optional) The name of the sorting key attribute (if using a composite key).
+        :param sorting_key_attribute: (Optional) The value of the sorting key attribute to query.
+        :param index: (Optional) The name of the Global Secondary Index to use for the query.
+        :param queryOperator: (Optional) The query operator to use. Supported values: 'gt', 'gte', 'lt', 'lte', 'between'.
+        :param betweenValue: (Optional) A tuple of two values (lowValue, highValue) for the 'between' query operator.
+
+        :return: The response of the query operation.
+        """
 
 		if self.check_index:
 			# When adding a global secondary index to an existing table, you cannot query the index until it has been backfilled.
@@ -115,6 +117,17 @@ class talk_with_dynamo():
 		return response
 
 	def getItem(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False):
+		"""
+        Get a single item from the DynamoDB Table.
+
+        :param partition_key: The name of the partition key attribute.
+        :param partition_key_attribute: The value of the partition key attribute to retrieve.
+        :param sorting_key: (Optional) The name of the sorting key attribute (if using a composite key).
+        :param sorting_key_attribute: (Optional) The value of the sorting key attribute to retrieve.
+
+        :return: The response containing the retrieved item or an empty response if the item does not exist.
+        """
+
 		if partition_key and partition_key_attribute and sorting_key and sorting_key_attribute:
 			response = self.table.get_item(
 				Key={
@@ -135,16 +148,13 @@ class talk_with_dynamo():
 
 	def batchGetItem(self, batch_keys):
 		"""
-		Gets a batch of items from Amazon DynamoDB. Batches can contain keys from
-		more than one table.\n
-		When Amazon DynamoDB cannot process all items in a batch, a set of unprocessed
-		keys is returned. This function uses an exponential backoff algorithm to retry
-		getting the unprocessed keys until all are retrieved or the specified
-		number of tries is reached.\n
-		:param batch_keys: The set of keys to retrieve. A batch can contain at most 100 keys. Otherwise, Amazon DynamoDB returns an error.\n
-		:return: The dictionary of retrieved items grouped under their respective table names.\n\n
-		Input Object Shape Example: {'tableName': {'Keys': [{'PartitionKey': 'PartitionKeyAttribute', 'SortingKey': 'SortingKey'}]}}
-		"""
+        Get a batch of items from the DynamoDB Table.
+
+        :param batch_keys: The dictionary of batch keys. Each entry in the dictionary should have the table name as the key and a list of key objects as the value.
+        :type batch_keys: dict
+        :return: The dictionary of retrieved items grouped under their respective table names.
+        """
+
 		tries = 0
 		max_tries = 5
 		sleepy_time = 1  # Start with 1 second of sleep, then exponentially increase.
@@ -174,8 +184,8 @@ class talk_with_dynamo():
 
 	def update(self, partition_key_attribute, sorting_key_attribute, update_key, update_attribute):
 		"""
-		This method is deprecated and should not be used. 
-		"""
+        [Deprecated] This method is deprecated and should not be used.
+        """
 		response = self.table.update_item(
 			Key={
 			'UniqueID': partition_key_attribute,
@@ -192,70 +202,105 @@ class talk_with_dynamo():
 		)
 		return response
 
-	def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None, sorting_key=None):
-		"""
-		Edits an existing item's attributes, or adds a new item to the table if it does not already exist. You can also perform a conditional update on an existing item (insert a new attribute name-value pair if it doesn't exist, or replace an existing name-value pair if it has certain expected attribute values).
-		\n
-		To perform conditional checks against an update call set conditionExpression and conditionCheck to the attribute field and attribute value respectfully.\n
-		\ti.e. conditionExpression='version', conditionCheck=0
-		\n
-		updateV2(partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None, sorting_key)
-		"""
-		key = {}
-		key['UniqueID'] = partition_key_attribute
+	def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None, sorting_key=None, max_tries=5):
+			"""
+			Updates an existing item's attributes or adds a new item to the table if it does not already exist. You can also perform a conditional update on an existing item (insert a new attribute name-value pair if it doesn't exist, or replace an existing name-value pair if it has certain expected attribute values).
 
-		if sorting_key_attribute  or sorting_key_attribute == 0:
-			if sorting_key:
-				key[sorting_key] = sorting_key_attribute
-			else:
-				key['Category'] = sorting_key_attribute
+			To perform conditional checks against an update call, set `conditionExpression` and `conditionCheck` to the attribute field and attribute value, respectively.
+			For example: `conditionExpression='version'` and `conditionCheck=0`
 
-		try:
-			if conditionExpression and conditionCheck:
-				response = self.table.update_item(
-					Key=key,
-					UpdateExpression="set #k = :a",
-					ExpressionAttributeNames = {
-						"#k" : update_key
-					},
-					ExpressionAttributeValues={
-						':a': update_attribute
-					},
-					ConditionExpression=Attr(conditionExpression).eq(conditionCheck),
-					ReturnValues="UPDATED_NEW"
-				)
-			else: 
-				response = self.table.update_item(
-					Key=key,
-					UpdateExpression="set #k = :a",
-					ExpressionAttributeNames = {
-						"#k" : update_key
-					},
-					ExpressionAttributeValues={
-						':a': update_attribute
-					},
-					ReturnValues="UPDATED_NEW"
-				)
-		except Exception as e:
-			if "ConditionalCheckFailedException" in str(e):
-				response = {'error': 'ConditionalCheckFailedException'}
-			else:
-				response = {'error': str(e)}
-		return response
+			:param partition_key_attribute: The partition key value of the item to be updated or inserted.
+			:param update_key: The name of the attribute to update or add.
+			:param update_attribute: The value of the attribute to update or add.
+			:param sorting_key_attribute: The optional sorting key value of the item to be updated or inserted.
+			:param conditionExpression: (Optional) The name of the attribute to use for conditional update check.
+			:param conditionCheck: (Optional) The expected value of the attribute for the conditional update.
+			:param sorting_key: (Optional) The name of the sorting key attribute, if different from the default 'Category'.
+			:param max_tries: (Optional) The maximum number of retries in case of throttling or other transient errors (default is 5).
+			:return: The response of the update operation. If the update is conditional and fails, it will return {'error': 'ConditionalCheckFailedException'}.
+
+			Example usage:
+			```
+			# Update an existing item's attribute 'version' with the new value '2'
+			response = updateV2(partition_key_attribute='item_id', update_key='version', update_attribute=2)
+
+			# Add a new item with partition key 'item_id' and sorting key 'category' with the attribute 'price' set to 10
+			response = updateV2(partition_key_attribute='item_id', update_key='price', update_attribute=10, sorting_key_attribute='category')
+			```
+			"""
+			key = {}
+			key['UniqueID'] = partition_key_attribute
+
+			if sorting_key_attribute is not None:
+				if sorting_key:
+					key[sorting_key] = sorting_key_attribute
+				else:
+					key['Category'] = sorting_key_attribute
+
+			for attempt in range(1, max_tries + 1):
+				try:
+					if conditionExpression and conditionCheck:
+						response = self.table.update_item(
+							Key=key,
+							UpdateExpression="set #k = :a",
+							ExpressionAttributeNames={
+								"#k": update_key
+							},
+							ExpressionAttributeValues={
+								':a': update_attribute
+							},
+							ConditionExpression=Attr(conditionExpression).eq(conditionCheck),
+							ReturnValues="UPDATED_NEW"
+						)
+					else:
+						response = self.table.update_item(
+							Key=key,
+							UpdateExpression="set #k = :a",
+							ExpressionAttributeNames={
+								"#k": update_key
+							},
+							ExpressionAttributeValues={
+								':a': update_attribute
+							},
+							ReturnValues="UPDATED_NEW"
+						)
+					return response
+				except Exception as e:
+					if attempt < max_tries and "ProvisionedThroughputExceededException" in str(e):
+						# Exponential backoff for throttling errors
+						sleep_time = 2 ** attempt
+						time.sleep(sleep_time)
+					else:
+						# If it's not a throttling error or max retries are reached, raise the exception or return an error response.
+						if "ConditionalCheckFailedException" in str(e):
+							return {'error': 'ConditionalCheckFailedException'}
+						else:
+							return {'error': str(e)}
 
 	def insert(self, payload):
+		"""
+        Insert an item into the DynamoDB Table.
+
+        :param payload: The dictionary representing the item to be inserted.
+        :type payload: dict
+        :return: The response of the insert operation.
+        """
+
 		response = self.table.put_item(Item=payload)
 
 		return response
 
 	def delete(self, partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None):
 		"""
-		Deletes items.
-		\n
-		If no partition key is specified, a partition key of 'UniqueID' is assumed. 
-		\n
-		delete(partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None)
-		"""
+        Delete an item from the DynamoDB Table.
+
+        :param partition_key_attribute: The value of the partition key attribute for the item to delete.
+        :param sorting_key_attribute: (Optional) The value of the sorting key attribute for the item to delete.
+        :param sorting_key: (Optional) The name of the sorting key attribute, if different from the default 'Category'.
+        :param partition_key: (Optional) The name of the partition key attribute, if different from the default 'UniqueID'.
+        :return: The response of the delete operation.
+        """
+
 		key = {}
 
 		if partition_key:
@@ -274,22 +319,51 @@ class talk_with_dynamo():
 		)
 		return response
 
-	def scan(self):
+	def scan(self, filter_expression=None, expression_attribute_values=None):
 		"""
-		Returns all items from the table as an array.
-		\n
-		scan()
+		Perform a table scan and retrieve items from the DynamoDB Table.
+
+		:param filter_expression: (Optional) A string representing the filter expression to apply during the scan.
+		:param expression_attribute_values: (Optional) A dictionary representing attribute values used in the filter expression.
+		:return: A list containing items that match the scan criteria.
 		"""
-		response = self.table.scan()
+		if filter_expression and expression_attribute_values:
+			response = self.table.scan(
+				FilterExpression=filter_expression,
+				ExpressionAttributeValues=expression_attribute_values
+			)
+		elif filter_expression:
+			response = self.table.scan(FilterExpression=filter_expression)
+		else:
+			response = self.table.scan()
+
 		data = response['Items']
 
 		while 'LastEvaluatedKey' in response:
-			response = self.table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+			if filter_expression and expression_attribute_values:
+				response = self.table.scan(
+					FilterExpression=filter_expression,
+					ExpressionAttributeValues=expression_attribute_values,
+					ExclusiveStartKey=response['LastEvaluatedKey']
+				)
+			elif filter_expression:
+				response = self.table.scan(
+					FilterExpression=filter_expression,
+					ExclusiveStartKey=response['LastEvaluatedKey']
+				)
+			else:
+				response = self.table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+
 			data.extend(response['Items'])
+
 		return data
 
 	def clearTable(self):
-		"""This will clear all entries from the table... Use with caution!!!"""
+		"""
+        [Warning] This will clear all entries from the table. Use with caution!!!
+
+        :return: None
+        """
 
 		tableKeyNames = [key.get("AttributeName") for key in self.table.key_schema]
 
