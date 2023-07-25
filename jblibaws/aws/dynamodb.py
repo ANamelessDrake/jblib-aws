@@ -40,18 +40,18 @@ class talk_with_dynamo():
 
 	def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False):
 		"""
-        Query a DynamoDB Table.
+		Query a DynamoDB Table.
 
-        :param partition_key: The name of the partition key attribute.
-        :param partition_key_attribute: The value of the partition key attribute to query.
-        :param sorting_key: (Optional) The name of the sorting key attribute (if using a composite key).
-        :param sorting_key_attribute: (Optional) The value of the sorting key attribute to query.
-        :param index: (Optional) The name of the Global Secondary Index to use for the query.
-        :param queryOperator: (Optional) The query operator to use. Supported values: 'gt', 'gte', 'lt', 'lte', 'between'.
-        :param betweenValue: (Optional) A tuple of two values (lowValue, highValue) for the 'between' query operator.
+		:param partition_key: The name of the partition key attribute.
+		:param partition_key_attribute: The value of the partition key attribute to query.
+		:param sorting_key: (Optional) The name of the sorting key attribute (if using a composite key).
+		:param sorting_key_attribute: (Optional) The value of the sorting key attribute to query.
+		:param index: (Optional) The name of the Global Secondary Index to use for the query.
+		:param queryOperator: (Optional) The query operator to use. Supported values: 'gt', 'gte', 'lt', 'lte', 'between'.
+		:param betweenValue: (Optional) A tuple of two values (lowValue, highValue) for the 'between' query operator.
 
-        :return: The response of the query operation.
-        """
+		:return: The response of the query operation.
+		"""
 
 		if self.check_index:
 			# When adding a global secondary index to an existing table, you cannot query the index until it has been backfilled.
@@ -118,15 +118,15 @@ class talk_with_dynamo():
 
 	def getItem(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False):
 		"""
-        Get a single item from the DynamoDB Table.
+		Get a single item from the DynamoDB Table.
 
-        :param partition_key: The name of the partition key attribute.
-        :param partition_key_attribute: The value of the partition key attribute to retrieve.
-        :param sorting_key: (Optional) The name of the sorting key attribute (if using a composite key).
-        :param sorting_key_attribute: (Optional) The value of the sorting key attribute to retrieve.
+		:param partition_key: The name of the partition key attribute.
+		:param partition_key_attribute: The value of the partition key attribute to retrieve.
+		:param sorting_key: (Optional) The name of the sorting key attribute (if using a composite key).
+		:param sorting_key_attribute: (Optional) The value of the sorting key attribute to retrieve.
 
-        :return: The response containing the retrieved item or an empty response if the item does not exist.
-        """
+		:return: The response containing the retrieved item or an empty response if the item does not exist.
+		"""
 
 		if partition_key and partition_key_attribute and sorting_key and sorting_key_attribute:
 			response = self.table.get_item(
@@ -148,12 +148,12 @@ class talk_with_dynamo():
 
 	def batchGetItem(self, batch_keys):
 		"""
-        Get a batch of items from the DynamoDB Table.
+		Get a batch of items from the DynamoDB Table.
 
-        :param batch_keys: The dictionary of batch keys. Each entry in the dictionary should have the table name as the key and a list of key objects as the value.
-        :type batch_keys: dict
-        :return: The dictionary of retrieved items grouped under their respective table names.
-        """
+		:param batch_keys: The dictionary of batch keys. Each entry in the dictionary should have the table name as the key and a list of key objects as the value.
+		:type batch_keys: dict
+		:return: The dictionary of retrieved items grouped under their respective table names.
+		"""
 
 		tries = 0
 		max_tries = 5
@@ -184,8 +184,8 @@ class talk_with_dynamo():
 
 	def update(self, partition_key_attribute, sorting_key_attribute, update_key, update_attribute):
 		"""
-        [Deprecated] This method is deprecated and should not be used.
-        """
+		[Deprecated] This method is deprecated and should not be used.
+		"""
 		response = self.table.update_item(
 			Key={
 			'UniqueID': partition_key_attribute,
@@ -279,12 +279,12 @@ class talk_with_dynamo():
 
 	def insert(self, payload):
 		"""
-        Insert an item into the DynamoDB Table.
+		Insert an item into the DynamoDB Table.
 
-        :param payload: The dictionary representing the item to be inserted.
-        :type payload: dict
-        :return: The response of the insert operation.
-        """
+		:param payload: The dictionary representing the item to be inserted.
+		:type payload: dict
+		:return: The response of the insert operation.
+		"""
 
 		response = self.table.put_item(Item=payload)
 
@@ -292,14 +292,14 @@ class talk_with_dynamo():
 
 	def delete(self, partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None):
 		"""
-        Delete an item from the DynamoDB Table.
+		Delete an item from the DynamoDB Table.
 
-        :param partition_key_attribute: The value of the partition key attribute for the item to delete.
-        :param sorting_key_attribute: (Optional) The value of the sorting key attribute for the item to delete.
-        :param sorting_key: (Optional) The name of the sorting key attribute, if different from the default 'Category'.
-        :param partition_key: (Optional) The name of the partition key attribute, if different from the default 'UniqueID'.
-        :return: The response of the delete operation.
-        """
+		:param partition_key_attribute: The value of the partition key attribute for the item to delete.
+		:param sorting_key_attribute: (Optional) The value of the sorting key attribute for the item to delete.
+		:param sorting_key: (Optional) The name of the sorting key attribute, if different from the default 'Category'.
+		:param partition_key: (Optional) The name of the partition key attribute, if different from the default 'UniqueID'.
+		:return: The response of the delete operation.
+		"""
 
 		key = {}
 
@@ -360,10 +360,10 @@ class talk_with_dynamo():
 
 	def clearTable(self):
 		"""
-        [Warning] This will clear all entries from the table. Use with caution!!!
+		[Warning] This will clear all entries from the table. Use with caution!!!
 
-        :return: None
-        """
+		:return: None
+		"""
 
 		tableKeyNames = [key.get("AttributeName") for key in self.table.key_schema]
 
@@ -387,3 +387,52 @@ class talk_with_dynamo():
 				else:
 					break
 		print(f"Deleted {counter} rows...")
+
+def extractDynamoDBData(payload, record, dataType="S"):
+	"""
+	Extracts and cleans data from a payload retrieved from DynamoDB.
+
+	Parameters:
+		payload (dict): The payload containing data retrieved from DynamoDB as a dictionary.
+		record (str): The key to access a specific piece of data within the payload.
+		dataType (str, optional): The type of data to retrieve. Default is "S" (string).
+
+	Returns:
+		str or int or False: The extracted and cleaned data based on the specified record and dataType.
+		Returns False if the specified record is not found, or if there is an error during data extraction.
+
+	Raises:
+		None: The function handles exceptions internally and returns False if any error occurs.
+
+	Example:
+		payload = {
+			"name": "John Doe",
+			"age": {
+				"N": "30"
+			},
+			"address": "123 Main Street"
+		}
+		data = returnData(payload, "name")
+		print(data)  # Output: "John Doe"
+
+		data = returnData(payload, "age", dataType="N")
+		print(data)  # Output: 30
+
+		data = returnData(payload, "email")
+		print(data)  # Output: False (record not found in payload)
+	"""
+	try:
+		data = payload.get(record, False)
+		if data:
+			data = data.get(dataType, False)
+
+			if dataType == "N":
+				if not data:
+					data = 0
+				else:
+					data = int(data)
+
+		return data
+	except Exception as e:
+		print(f'Failed while attempting to clean DynamoDB data: {e}\nPayload: {payload} -- Record: {record} -- Data Type: {dataType}')
+		return False

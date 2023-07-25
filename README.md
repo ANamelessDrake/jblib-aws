@@ -48,6 +48,42 @@ Example:
     dynamo.clearTable() # Delete all entries in a table -- Use with caution
 ```
 
+### `extractDynamoDBData`
+
+Extracts and cleans data from a payload retrieved from DynamoDB.
+
+Parameters:
+
+-   payload (dict): The payload containing data retrieved from DynamoDB as a dictionary.
+-   record (str): The key to access a specific piece of data within the payload.
+-   dataType (str, optional): The type of data to retrieve. Default is "S" (string).
+
+Returns:
+
+-   str or int or False: The extracted and cleaned data based on the specified record and dataType.
+-   Returns False if the specified record is not found, or if there is an error during data extraction.
+
+```python
+function extractDynamoDBData(payload, record, dataType="S")
+
+Example:
+    payload = {
+        "name": "John Doe",
+        "age": {
+            "N": "30"
+        },
+        "address": "123 Main Street"
+    }
+    data = returnData(payload, "name")
+    print(data)  # Output: "John Doe"
+
+    data = returnData(payload, "age", dataType="N")
+    print(data)  # Output: 30
+
+    data = returnData(payload, "email")
+    print(data)  # Output: False (record not found in payload)
+```
+
 ---
 
 ### `talk_with_cognito`
