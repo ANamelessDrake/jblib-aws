@@ -64,15 +64,15 @@ class talk_with_dynamo():
 				else:
 					break
 
-		if index:
-			response = self.table.query(
-				IndexName=index,
-				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute),
-			)
-		elif index and sorting_key and sorting_key_attribute:
+		if index and sorting_key and sorting_key_attribute:
 			response = self.table.query(
 				IndexName=index,
 				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).eq(sorting_key_attribute),
+			)
+		elif index:
+			response = self.table.query(
+				IndexName=index,
+				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute),
 			)
 		elif partition_key and partition_key_attribute and sorting_key and sorting_key_attribute and not queryOperator:
 			response = self.table.query(
