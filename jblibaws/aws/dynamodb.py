@@ -32,11 +32,24 @@ class DecimalEncoder(json.JSONEncoder):
 		return super(DecimalEncoder, self).default(o)
 
 class talk_with_dynamo():
-	def __init__(self, table, boto_session, region='us-east-1', check_index=False, debug=False):
+	def __init__(self, table, boto_session=None, region='us-east-1', check_index=False, debug=False):
+		"""
+		Initialize a communication interface with a DynamoDB table using the provided parameters.
+
+		:param table: The name of the DynamoDB table to communicate with.
+		:param boto_session: (Optional) The Boto3 session object to use for DynamoDB interactions. If None, a new session will be created.
+		:param region: (Optional) The AWS region where the DynamoDB table is located (default is 'us-east-1').
+		:param check_index: (Optional) Whether to check the readiness of a global secondary index before querying (default is False).
+		:param debug: (Optional) Enable debugging mode to print additional information (default is False).
+		"""
+		if boto_session is None:
+			boto_session = boto3.session.Session()
+
 		self.boto_session = boto_session
 		self.dynamodb = self.boto_session.resource('dynamodb', region_name=region)
 		self.table = self.dynamodb.Table(table)
 		self.check_index = check_index
+		self.debug = debug
 
 	def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False):
 		"""
