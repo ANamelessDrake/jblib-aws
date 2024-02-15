@@ -416,7 +416,7 @@ class talk_with_dynamo():
 		:raises: TableDescriptionError if the table description cannot be retrieved.
 		"""
 		try:
-			response = self.dynamodb.describe_table(TableName=self.table.name)
+			response = self.table.describe_table(TableName=self.table.name)
 			return response
 		except Exception as e:
 			raise self.TableDescriptionError(f"Failed to get table description: {e}")
