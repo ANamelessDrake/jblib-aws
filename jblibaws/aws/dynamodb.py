@@ -404,6 +404,23 @@ class talk_with_dynamo():
 					break
 		print(f"Deleted {counter} rows...")
 
+	class TableDescriptionError(Exception):
+		"""Custom exception class for table description errors."""
+		pass
+
+	def getTableDescription(self):
+		"""
+		Retrieves the entire description of the DynamoDB Table.
+
+		:return: A dictionary containing the table description.
+		:raises: TableDescriptionError if the table description cannot be retrieved.
+		"""
+		try:
+			response = self.dynamodb.describe_table(TableName=self.table.name)
+			return response
+		except Exception as e:
+			raise self.TableDescriptionError(f"Failed to get table description: {e}")
+
 def extractDynamoDBData(payload, record, dataType="S"):
 	"""
 	Extracts and cleans data from a payload retrieved from DynamoDB.

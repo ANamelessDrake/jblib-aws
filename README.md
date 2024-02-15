@@ -43,7 +43,9 @@ Example:
 
     delete_response = dynamo.delete(partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None)
 
-    scan_results = dynamo.scan(filter_expression=None, expression_attribute_values=None)
+    scan_results = dynamo.scan(filter_expression=None, expression_attribute_values=None, max_pages=None)
+
+    get_table_description = dynamo.getTableDescription()
 
     dynamo.clearTable() # Delete all entries in a table -- Use with caution
 ```
