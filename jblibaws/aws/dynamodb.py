@@ -47,6 +47,7 @@ class talk_with_dynamo():
 
 		self.boto_session = boto_session
 		self.dynamodb = self.boto_session.resource('dynamodb', region_name=region)
+		self.dynamodb_client = self.boto_session.client('dynamodb', region_name=region)
 		self.table = self.dynamodb.Table(table)
 		self.check_index = check_index
 		self.debug = debug
@@ -416,7 +417,7 @@ class talk_with_dynamo():
 		:raises: TableDescriptionError if the table description cannot be retrieved.
 		"""
 		try:
-			response = self.table.describe_table(TableName=self.table.name)
+			response = self.dynamodb_client.describe_table(TableName=self.table.name)
 			return response
 		except Exception as e:
 			raise self.TableDescriptionError(f"Failed to get table description: {e}")
