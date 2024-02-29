@@ -52,7 +52,7 @@ class talk_with_dynamo():
 		self.check_index = check_index
 		self.debug = debug
 
-	def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False, keyConditionExpression=None):
+	def query(self, partition_key=None, partition_key_attribute=None, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False, keyConditionExpression=None):
 		"""
 		Query a DynamoDB Table with enhanced flexibility via custom KeyConditionExpression.
 
