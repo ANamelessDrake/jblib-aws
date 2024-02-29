@@ -52,9 +52,9 @@ class talk_with_dynamo():
 		self.check_index = check_index
 		self.debug = debug
 
-	def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False):
+	def query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False, keyConditionExpression=None):
 		"""
-		Query a DynamoDB Table.
+		Query a DynamoDB Table with enhanced flexibility via custom KeyConditionExpression.
 
 		:param partition_key: The name of the partition key attribute.
 		:param partition_key_attribute: The value of the partition key attribute to query.
@@ -63,70 +63,29 @@ class talk_with_dynamo():
 		:param index: (Optional) The name of the Global Secondary Index to use for the query.
 		:param queryOperator: (Optional) The query operator to use. Supported values: 'gt', 'gte', 'lt', 'lte', 'between'.
 		:param betweenValue: (Optional) A tuple of two values (lowValue, highValue) for the 'between' query operator.
-
+		:param keyConditionExpression: (Optional) A custom KeyConditionExpression for complex query conditions.
 		:return: The response of the query operation.
 		"""
 
-		if self.check_index:
-			# When adding a global secondary index to an existing table, you cannot query the index until it has been backfilled.
-			# This portion of the script waits until the index is in the “ACTIVE” status, indicating it is ready to be queried.
-			while True:
-				if not self.table.global_secondary_indexes or self.table.global_secondary_indexes[0]['IndexStatus'] != 'ACTIVE':
-					print('[{}]  Waiting for index to backfill...'.format('INFO'))
-					sleep(5)
-					self.table.reload()
-				else:
-					break
+		query_params = {
+			'KeyConditionExpression': keyConditionExpression or Key(partition_key).eq(partition_key_attribute)
+		}
 
-		if index and sorting_key and sorting_key_attribute:
-			response = self.table.query(
-				IndexName=index,
-				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).eq(sorting_key_attribute),
-			)
-		elif index:
-			response = self.table.query(
-				IndexName=index,
-				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute),
-			)
-		elif partition_key and partition_key_attribute and sorting_key and sorting_key_attribute and not queryOperator:
-			response = self.table.query(
-				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).eq(sorting_key_attribute),
-			)
-		elif partition_key and partition_key_attribute and sorting_key and sorting_key_attribute and queryOperator and not betweenValue:
-			if queryOperator == 'gt': 
-				response = self.table.query(
-					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).gt(sorting_key_attribute),
-				)
-			elif queryOperator == 'gte': 
-				response = self.table.query(
-					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).gte(sorting_key_attribute),
-				)
-			elif queryOperator == 'lt': 
-				response = self.table.query(
-					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).lt(sorting_key_attribute),
-				)
-			elif queryOperator == 'lte': 
-				response = self.table.query(
-					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).lte(sorting_key_attribute),
-				)
-			else:
-				response = ""
+		if sorting_key and sorting_key_attribute and not keyConditionExpression:
+			query_params['KeyConditionExpression'] &= Key(sorting_key).eq(sorting_key_attribute)
 
-		elif partition_key and partition_key_attribute and sorting_key and queryOperator and betweenValue:
-			if queryOperator == 'between' and betweenValue: 
-				lowValue, highValue = betweenValue
+		if betweenValue and queryOperator == 'between' and not keyConditionExpression:
+			lowValue, highValue = betweenValue
+			query_params['KeyConditionExpression'] &= Key(sorting_key).between(lowValue, highValue)
 
-				response = self.table.query(
-					KeyConditionExpression=Key(partition_key).eq(partition_key_attribute) & Key(sorting_key).between(lowValue, highValue),
-				)
-			else:
-				response = ""
-		elif partition_key and partition_key_attribute:
-			response = self.table.query(
-				KeyConditionExpression=Key(partition_key).eq(partition_key_attribute),
-			)
-		else:
-			response = ""
+		if index:
+			query_params['IndexName'] = index
+
+		try:
+			response = self.table.query(**query_params)
+		except Exception as e:
+			print(f"Query failed: {e}")
+			response = {}
 
 		return response
 
