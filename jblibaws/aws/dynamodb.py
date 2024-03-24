@@ -52,7 +52,9 @@ class talk_with_dynamo():
 		self.check_index = check_index
 		self.debug = debug
 
-	def query(self, partition_key=None, partition_key_attribute=None, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False, keyConditionExpression=None):
+	def query(self, partition_key=None, partition_key_attribute=None, sorting_key=False, 
+			sorting_key_attribute=False, index=False, queryOperator=False, 
+			betweenValue=False, keyConditionExpression=None, scanIndexForward=True, limit=None):
 		"""
 		Query a DynamoDB Table with enhanced flexibility via custom KeyConditionExpression.
 
@@ -64,11 +66,14 @@ class talk_with_dynamo():
 		:param queryOperator: (Optional) The query operator to use. Supported values: 'gt', 'gte', 'lt', 'lte', 'between'.
 		:param betweenValue: (Optional) A tuple of two values (lowValue, highValue) for the 'between' query operator.
 		:param keyConditionExpression: (Optional) A custom KeyConditionExpression for complex query conditions.
+		:param scanIndexForward: (Optional) Specifies the order for index traversal: If True (default), the traversal is ascending; if False, the traversal is descending.
+		:param limit: (Optional) The maximum number of items to evaluate (not necessarily the number of matching items).
 		:return: The response of the query operation.
 		"""
 
 		query_params = {
-			'KeyConditionExpression': keyConditionExpression or Key(partition_key).eq(partition_key_attribute)
+			'KeyConditionExpression': keyConditionExpression or Key(partition_key).eq(partition_key_attribute),
+			'ScanIndexForward': scanIndexForward
 		}
 
 		if sorting_key and sorting_key_attribute and not keyConditionExpression:
@@ -81,6 +86,9 @@ class talk_with_dynamo():
 		if index:
 			query_params['IndexName'] = index
 
+		if limit:
+			query_params['Limit'] = limit
+
 		try:
 			response = self.table.query(**query_params)
 		except Exception as e:
@@ -88,6 +96,7 @@ class talk_with_dynamo():
 			response = {}
 
 		return response
+
 
 	def getItem(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False):
 		"""

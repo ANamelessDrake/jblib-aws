@@ -26,7 +26,9 @@ Example:
     boto_session = boto3.session.Session()
     dynamo = talk_with_dynamo(table_name, boto_session) # Generate Database Object
 
-    response = dynamo.query(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False, index=False, queryOperator=False, betweenValue=False, keyConditionExpression=None):
+    response = dynamo.query(partition_key=None, partition_key_attribute=None, sorting_key=False, 
+			sorting_key_attribute=False, index=False, queryOperator=False, 
+			betweenValue=False, keyConditionExpression=None, scanIndexForward=True, limit=None):
     print("Response: {}".format(response))
 
     getResponse = dynamo.getItem(partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False)
