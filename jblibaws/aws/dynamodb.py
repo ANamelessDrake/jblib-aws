@@ -184,80 +184,57 @@ class talk_with_dynamo():
 		)
 		return response
 
-	def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None, conditionExpression=None, conditionCheck=None, sorting_key=None, max_tries=5):
-			"""
-			Updates an existing item's attributes or adds a new item to the table if it does not already exist. You can also perform a conditional update on an existing item (insert a new attribute name-value pair if it doesn't exist, or replace an existing name-value pair if it has certain expected attribute values).
+	def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None,
+				conditionExpression=None, conditionCheck=None, sorting_key=None, max_tries=5, 
+				additionalUpdateExpressions=None, expressionAttributeValues=None, 
+				expressionAttributeNames=None, returnValues="UPDATED_NEW"):
+		"""
+		Enhances the existing update method to support more complex update operations including increment operations,
+		complex condition expressions, handling map updates, and additional update expressions.
 
-			To perform conditional checks against an update call, set `conditionExpression` and `conditionCheck` to the attribute field and attribute value, respectively.
-			For example: `conditionExpression='version'` and `conditionCheck=0`
+		Parameters are largely the same as before, with the addition of:
+		- additionalUpdateExpressions: A string containing additional update expressions (e.g., 'ADD totalViews :val').
+		- expressionAttributeValues: A dictionary of additional expression attribute values if needed beyond update_attribute.
+		- expressionAttributeNames: A dictionary of additional expression attribute names for more complex expressions.
+		- returnValues: Specifies what the service returns from the update (e.g., 'NONE', 'ALL_OLD', 'UPDATED_OLD', 'ALL_NEW', 'UPDATED_NEW').
+		"""
+		key = {'UniqueID': partition_key_attribute}
+		if sorting_key_attribute:
+			key[sorting_key or 'Category'] = sorting_key_attribute
 
-			:param partition_key_attribute: The partition key value of the item to be updated or inserted.
-			:param update_key: The name of the attribute to update or add.
-			:param update_attribute: The value of the attribute to update or add.
-			:param sorting_key_attribute: The optional sorting key value of the item to be updated or inserted.
-			:param conditionExpression: (Optional) The name of the attribute to use for conditional update check.
-			:param conditionCheck: (Optional) The expected value of the attribute for the conditional update.
-			:param sorting_key: (Optional) The name of the sorting key attribute, if different from the default 'Category'.
-			:param max_tries: (Optional) The maximum number of retries in case of throttling or other transient errors (default is 5).
-			:return: The response of the update operation. If the update is conditional and fails, it will return {'error': 'ConditionalCheckFailedException'}.
+		updateExpression = "SET #k = :a"
+		if additionalUpdateExpressions:
+			updateExpression += f", {additionalUpdateExpressions}"
 
-			Example usage:
-			```
-			# Update an existing item's attribute 'version' with the new value '2'
-			response = updateV2(partition_key_attribute='item_id', update_key='version', update_attribute=2)
+		expressionAttributeNames = {"#k": update_key} if not expressionAttributeNames else expressionAttributeNames
+		expressionAttributeValues = {':a': update_attribute} if not expressionAttributeValues else expressionAttributeValues
 
-			# Add a new item with partition key 'item_id' and sorting key 'category' with the attribute 'price' set to 10
-			response = updateV2(partition_key_attribute='item_id', update_key='price', update_attribute=10, sorting_key_attribute='category')
-			```
-			"""
-			key = {}
-			key['UniqueID'] = partition_key_attribute
+		if conditionExpression and conditionCheck and not expressionAttributeValues.get(':condVal'):
+			conditionExpression += " AND #k = :condVal"
+			expressionAttributeValues[':condVal'] = conditionCheck
 
-			if sorting_key_attribute is not None:
-				if sorting_key:
-					key[sorting_key] = sorting_key_attribute
+		for attempt in range(1, max_tries + 1):
+			try:
+				response = self.table.update_item(
+					Key=key,
+					UpdateExpression=updateExpression,
+					ExpressionAttributeNames=expressionAttributeNames,
+					ExpressionAttributeValues=expressionAttributeValues,
+					ConditionExpression=conditionExpression if conditionExpression else None,
+					ReturnValues=returnValues
+				)
+				return response
+			except Exception as e:
+				if attempt < max_tries and "ProvisionedThroughputExceededException" in str(e):
+					# Exponential backoff for throttling errors
+					sleep_time = 2 ** attempt
+					time.sleep(sleep_time)
 				else:
-					key['Category'] = sorting_key_attribute
-
-			for attempt in range(1, max_tries + 1):
-				try:
-					if conditionExpression and conditionCheck:
-						response = self.table.update_item(
-							Key=key,
-							UpdateExpression="set #k = :a",
-							ExpressionAttributeNames={
-								"#k": update_key
-							},
-							ExpressionAttributeValues={
-								':a': update_attribute
-							},
-							ConditionExpression=Attr(conditionExpression).eq(conditionCheck),
-							ReturnValues="UPDATED_NEW"
-						)
+					# If it's not a throttling error or max retries are reached, raise the exception or return an error response.
+					if "ConditionalCheckFailedException" in str(e):
+						return {'error': 'ConditionalCheckFailedException'}
 					else:
-						response = self.table.update_item(
-							Key=key,
-							UpdateExpression="set #k = :a",
-							ExpressionAttributeNames={
-								"#k": update_key
-							},
-							ExpressionAttributeValues={
-								':a': update_attribute
-							},
-							ReturnValues="UPDATED_NEW"
-						)
-					return response
-				except Exception as e:
-					if attempt < max_tries and "ProvisionedThroughputExceededException" in str(e):
-						# Exponential backoff for throttling errors
-						sleep_time = 2 ** attempt
-						time.sleep(sleep_time)
-					else:
-						# If it's not a throttling error or max retries are reached, raise the exception or return an error response.
-						if "ConditionalCheckFailedException" in str(e):
-							return {'error': 'ConditionalCheckFailedException'}
-						else:
-							return {'error': str(e)}
+						return {'error': str(e)}
 
 	def insert(self, payload):
 		"""

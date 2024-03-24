@@ -41,7 +41,10 @@ Example:
 
     update_response = dynamo.update(partition_key_attribute, sorting_key_attribute, update_key, update_attribute)
 
-    update_response = dynamo.updateV2(partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None)
+    update_response = dynamo.updateV2(partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None,
+				conditionExpression=None, conditionCheck=None, sorting_key=None, max_tries=5, 
+				additionalUpdateExpressions=None, expressionAttributeValues=None, 
+				expressionAttributeNames=None, returnValues="UPDATED_NEW"):
 
     delete_response = dynamo.delete(partition_key_attribute, sorting_key_attribute=False, sorting_key=None, partition_key=None)
 
