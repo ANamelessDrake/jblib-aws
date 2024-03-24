@@ -97,7 +97,6 @@ class talk_with_dynamo():
 
 		return response
 
-
 	def getItem(self, partition_key, partition_key_attribute, sorting_key=False, sorting_key_attribute=False):
 		"""
 		Get a single item from the DynamoDB Table.
@@ -188,16 +187,6 @@ class talk_with_dynamo():
 				conditionExpression=None, conditionCheck=None, sorting_key=None, max_tries=5, 
 				additionalUpdateExpressions=None, expressionAttributeValues=None, 
 				expressionAttributeNames=None, returnValues="UPDATED_NEW"):
-		"""
-		Enhances the existing update method to support more complex update operations including increment operations,
-		complex condition expressions, handling map updates, and additional update expressions.
-
-		Parameters are largely the same as before, with the addition of:
-		- additionalUpdateExpressions: A string containing additional update expressions (e.g., 'ADD totalViews :val').
-		- expressionAttributeValues: A dictionary of additional expression attribute values if needed beyond update_attribute.
-		- expressionAttributeNames: A dictionary of additional expression attribute names for more complex expressions.
-		- returnValues: Specifies what the service returns from the update (e.g., 'NONE', 'ALL_OLD', 'UPDATED_OLD', 'ALL_NEW', 'UPDATED_NEW').
-		"""
 		key = {'UniqueID': partition_key_attribute}
 		if sorting_key_attribute:
 			key[sorting_key or 'Category'] = sorting_key_attribute
@@ -209,28 +198,29 @@ class talk_with_dynamo():
 		expressionAttributeNames = {"#k": update_key} if not expressionAttributeNames else expressionAttributeNames
 		expressionAttributeValues = {':a': update_attribute} if not expressionAttributeValues else expressionAttributeValues
 
-		if conditionExpression and conditionCheck and not expressionAttributeValues.get(':condVal'):
-			conditionExpression += " AND #k = :condVal"
-			expressionAttributeValues[':condVal'] = conditionCheck
+		request_params = {
+			"Key": key,
+			"UpdateExpression": updateExpression,
+			"ExpressionAttributeNames": expressionAttributeNames,
+			"ExpressionAttributeValues": expressionAttributeValues,
+			"ReturnValues": returnValues
+		}
+
+		if conditionExpression:
+			request_params["ConditionExpression"] = conditionExpression
+			if conditionCheck and not expressionAttributeValues.get(':condVal'):
+				request_params["ConditionExpression"] += " AND #k = :condVal"
+				request_params["ExpressionAttributeValues"][':condVal'] = conditionCheck
 
 		for attempt in range(1, max_tries + 1):
 			try:
-				response = self.table.update_item(
-					Key=key,
-					UpdateExpression=updateExpression,
-					ExpressionAttributeNames=expressionAttributeNames,
-					ExpressionAttributeValues=expressionAttributeValues,
-					ConditionExpression=conditionExpression if conditionExpression else None,
-					ReturnValues=returnValues
-				)
+				response = self.table.update_item(**request_params)
 				return response
 			except Exception as e:
 				if attempt < max_tries and "ProvisionedThroughputExceededException" in str(e):
-					# Exponential backoff for throttling errors
 					sleep_time = 2 ** attempt
 					time.sleep(sleep_time)
 				else:
-					# If it's not a throttling error or max retries are reached, raise the exception or return an error response.
 					if "ConditionalCheckFailedException" in str(e):
 						return {'error': 'ConditionalCheckFailedException'}
 					else:
