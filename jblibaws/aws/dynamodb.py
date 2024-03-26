@@ -184,47 +184,60 @@ class talk_with_dynamo():
 		return response
 
 	def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None,
-				conditionExpression=None, conditionCheck=None, sorting_key=None, max_tries=5, 
-				additionalUpdateExpressions=None, expressionAttributeValues=None, 
-				expressionAttributeNames=None, returnValues="UPDATED_NEW"):
-		key = {'UniqueID': partition_key_attribute}
-		if sorting_key_attribute:
-			key[sorting_key or 'Category'] = sorting_key_attribute
+				conditionExpression=None, conditionCheck=None, sorting_key=None, max_tries=5,
+				additionalUpdateExpressions=None, expressionAttributeValues=None,
+				expressionAttributeNames=None, returnValues="UPDATED_NEW",
+				partitionKeyName='UniqueID', sortingKeyName='Category'):
+		"""
+		Enhances the update capability to include dynamic partition and sorting keys.
 
-		updateExpression = "SET #k = :a"
+		:param partition_key_attribute: The value of the partition key for the item to be updated.
+		:param update_key: The attribute name that will be updated.
+		:param update_attribute: The new value for the update_key.
+		:param sorting_key_attribute: The value of the sorting key for the item to be updated, if applicable.
+		:param conditionExpression: A condition that must be satisfied for the update to proceed.
+		:param conditionCheck: A specific value used in the conditionExpression for comparison.
+		:param sorting_key: [Deprecated] Use sorting_key_attribute instead.
+		:param max_tries: Number of attempts to make in the face of ProvisionedThroughputExceededException.
+		:param additionalUpdateExpressions: Additional expressions for more complex updates.
+		:param expressionAttributeValues: A dictionary of attribute values used in the update expression.
+		:param expressionAttributeNames: A dictionary of attribute names substitution tokens used in the update expression.
+		:param returnValues: Determines what is returned in the response of the update.
+		:param partitionKeyName: The name of the partition key (default is 'UniqueID').
+		:param sortingKeyName: The name of the sorting key (default is 'Category').
+		"""
+		key = {partitionKeyName: {'S': partition_key_attribute}}
+		if sorting_key_attribute:
+			key[sortingKeyName] = {'S': sorting_key_attribute}
+
+		updateExpression = f"SET #k = :a"
 		if additionalUpdateExpressions:
 			updateExpression += f", {additionalUpdateExpressions}"
 
 		expressionAttributeNames = {"#k": update_key} if not expressionAttributeNames else expressionAttributeNames
-		expressionAttributeValues = {':a': update_attribute} if not expressionAttributeValues else expressionAttributeValues
+		expressionAttributeValues = {':a': {'S': update_attribute}} if not expressionAttributeValues else expressionAttributeValues
 
-		request_params = {
-			"Key": key,
-			"UpdateExpression": updateExpression,
-			"ExpressionAttributeNames": expressionAttributeNames,
-			"ExpressionAttributeValues": expressionAttributeValues,
-			"ReturnValues": returnValues
-		}
-
-		if conditionExpression:
-			request_params["ConditionExpression"] = conditionExpression
-			if conditionCheck and not expressionAttributeValues.get(':condVal'):
-				request_params["ConditionExpression"] += " AND #k = :condVal"
-				request_params["ExpressionAttributeValues"][':condVal'] = conditionCheck
+		if conditionExpression and conditionCheck and not expressionAttributeValues.get(':condVal'):
+			conditionExpression += " AND #k = :condVal"
+			expressionAttributeValues[':condVal'] = {'S': conditionCheck}
 
 		for attempt in range(1, max_tries + 1):
 			try:
-				response = self.table.update_item(**request_params)
+				response = self.table.update_item(
+					Key=key,
+					UpdateExpression=updateExpression,
+					ExpressionAttributeNames=expressionAttributeNames,
+					ExpressionAttributeValues=expressionAttributeValues,
+					ConditionExpression=conditionExpression if conditionExpression else None,
+					ReturnValues=returnValues
+				)
 				return response
 			except Exception as e:
 				if attempt < max_tries and "ProvisionedThroughputExceededException" in str(e):
 					sleep_time = 2 ** attempt
 					time.sleep(sleep_time)
 				else:
-					if "ConditionalCheckFailedException" in str(e):
-						return {'error': 'ConditionalCheckFailedException'}
-					else:
-						return {'error': str(e)}
+					raise e
 
 	def insert(self, payload):
 		"""
