@@ -184,46 +184,47 @@ class talk_with_dynamo():
 		return response
 
 	def updateV2(self, partition_key_attribute, update_key, update_attribute, sorting_key_attribute=None,
-				conditionExpression=None, conditionCheck=None, max_tries=5,
+				conditionExpression=None, conditionCheck=None, sorting_key=None, max_tries=5,
 				additionalUpdateExpressions=None, expressionAttributeValues=None,
 				expressionAttributeNames=None, returnValues="UPDATED_NEW",
 				partitionKeyName='UniqueID', sortingKeyName='Category'):
 		"""
-		Enhances the update capability to include dynamic partition and sorting keys, with optional condition expressions.
+		Performs an update operation on a DynamoDB item with enhanced flexibility for keys and update expressions.
 
-		:param partition_key_attribute: The value of the partition key for the item to be updated.
-		:param update_key: The attribute name that will be updated.
-		:param update_attribute: The new value for the update_key.
-		:param sorting_key_attribute: The value of the sorting key for the item to be updated, if applicable.
-		:param conditionExpression: A condition expression that must be satisfied for the update to proceed. Optional.
-		:param conditionCheck: A specific value used in the conditionExpression for comparison. Required if conditionExpression is used.
-		:param max_tries: Number of attempts to make in the face of ProvisionedThroughputExceededException.
-		:param additionalUpdateExpressions: Additional expressions for more complex updates.
-		:param expressionAttributeValues: A dictionary of attribute values used in the update expression.
-		:param expressionAttributeNames: A dictionary of attribute names substitution tokens used in the update expression.
-		:param returnValues: Determines what is returned in the response of the update. Default is "UPDATED_NEW".
-		:param partitionKeyName: The name of the partition key (default is 'UniqueID').
-		:param sortingKeyName: The name of the sorting key (default is 'Category').
+		Parameters:
+		- partition_key_attribute (str): The value of the partition key for the item to be updated.
+		- update_key (str): The attribute name to be updated.
+		- update_attribute (str/dict): The new value for the update_key.
+		- sorting_key_attribute (str, optional): The value of the sorting key for the item to be updated, if applicable.
+		- conditionExpression (str, optional): A condition that must be satisfied for the update to proceed.
+		- conditionCheck (str, optional): A specific value used in the conditionExpression for comparison. Not currently used.
+		- sorting_key (str, optional): [Deprecated] Use sorting_key_attribute instead.
+		- max_tries (int): Number of attempts to make in the face of ProvisionedThroughputExceededException.
+		- additionalUpdateExpressions (str, optional): Additional expressions for more complex updates.
+		- expressionAttributeValues (dict, optional): A dictionary of attribute values used in the update expression, mapped to their placeholders.
+		- expressionAttributeNames (dict, optional): A dictionary of attribute names substitution tokens used in the update expression, mapped to their actual attribute names.
+		- returnValues (str): Determines what is returned in the response of the update. Defaults to "UPDATED_NEW".
+		- partitionKeyName (str): The name of the partition key (default is 'UniqueID').
+		- sortingKeyName (str): The name of the sorting key (default is 'Category').
 
-		This method updates an item's attributes in a DynamoDB table. It can dynamically handle partition and sorting keys,
-		apply additional complex update expressions, and include optional condition expressions to control the update operation.
+		Returns:
+		- dict: The response from the DynamoDB update_item call.
 
-		It automatically retries the update operation up to 'max_tries' times in case of 'ProvisionedThroughputExceededException'.
+		This method constructs the update operation request dynamically based on provided parameters,
+		allowing for conditional updates, retries on throughput exceeded exceptions, and the use of dynamic keys.
 		"""
-		key = {partitionKeyName: {'S': partition_key_attribute}}
-		if sorting_key_attribute:
-			key[sortingKeyName] = {'S': sorting_key_attribute}
 
-		updateExpression = f"SET #k = :a"
+		key = {partitionKeyName: partition_key_attribute}
+		if sorting_key_attribute:
+			key[sortingKeyName] = sorting_key_attribute
+
+		# Constructing the UpdateExpression
+		updateExpression = f"SET #updateKey = :updateValue"
+		expressionAttributeNames = {'#updateKey': update_key}
+		expressionAttributeValues = {':updateValue': update_attribute}
+
 		if additionalUpdateExpressions:
 			updateExpression += f", {additionalUpdateExpressions}"
-
-		expressionAttributeNames = {"#k": update_key} if not expressionAttributeNames else expressionAttributeNames
-		expressionAttributeValues = {':a': {'S': update_attribute}} if not expressionAttributeValues else expressionAttributeValues
-
-		if conditionExpression and conditionCheck and not expressionAttributeValues.get(':condVal'):
-			conditionExpression += " AND #k = :condVal"
-			expressionAttributeValues[':condVal'] = {'S': conditionCheck}
 
 		request_params = {
 			"Key": key,
@@ -232,20 +233,23 @@ class talk_with_dynamo():
 			"ExpressionAttributeValues": expressionAttributeValues,
 			"ReturnValues": returnValues
 		}
-		
+
+		# Adding conditionExpression if present
 		if conditionExpression:
 			request_params["ConditionExpression"] = conditionExpression
 
-		for attempt in range(1, max_tries + 1):
+		for attempt in range(max_tries):
 			try:
 				response = self.table.update_item(**request_params)
 				return response
 			except Exception as e:
-				if attempt < max_tries and "ProvisionedThroughputExceededException" in str(e):
+				if attempt < max_tries - 1 and "ProvisionedThroughputExceededException" in str(e):
 					sleep_time = 2 ** attempt
 					time.sleep(sleep_time)
 				else:
-					raise e
+					raise
+
+
 
 	def insert(self, payload):
 		"""
