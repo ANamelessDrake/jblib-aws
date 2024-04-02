@@ -293,43 +293,32 @@ class talk_with_dynamo():
 		)
 		return response
 
-	def scan(self, filter_expression=None, expression_attribute_values=None, max_pages=None):
+	def scan(self, filter_expression=None, expression_attribute_values=None, expression_attribute_names=None, max_pages=None):
 		"""
 		Perform a table scan and retrieve items from the DynamoDB Table with an option to limit the number of pages.
 
 		:param filter_expression: (Optional) A string representing the filter expression to apply during the scan.
 		:param expression_attribute_values: (Optional) A dictionary representing attribute values used in the filter expression.
+		:param expression_attribute_names: (Optional) A dictionary of attribute names substitution tokens used in the expression.
 		:param max_pages: (Optional) An integer representing the maximum number of pages to retrieve.
 		:return: A list containing items that match the scan criteria.
 		"""
-		if filter_expression and expression_attribute_values:
-			response = self.table.scan(
-				FilterExpression=filter_expression,
-				ExpressionAttributeValues=expression_attribute_values
-			)
-		elif filter_expression:
-			response = self.table.scan(FilterExpression=filter_expression)
-		else:
-			response = self.table.scan()
+		scan_kwargs = {}
+		if filter_expression:
+			scan_kwargs['FilterExpression'] = filter_expression
+		if expression_attribute_values:
+			scan_kwargs['ExpressionAttributeValues'] = expression_attribute_values
+		if expression_attribute_names:
+			scan_kwargs['ExpressionAttributeNames'] = expression_attribute_names
+
+		response = self.table.scan(**scan_kwargs)
 
 		data = response['Items']
 		pages_processed = 1
 
 		while 'LastEvaluatedKey' in response and (max_pages is None or pages_processed < max_pages):
-			if filter_expression and expression_attribute_values:
-				response = self.table.scan(
-					FilterExpression=filter_expression,
-					ExpressionAttributeValues=expression_attribute_values,
-					ExclusiveStartKey=response['LastEvaluatedKey']
-				)
-			elif filter_expression:
-				response = self.table.scan(
-					FilterExpression=filter_expression,
-					ExclusiveStartKey=response['LastEvaluatedKey']
-				)
-			else:
-				response = self.table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
-
+			scan_kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']
+			response = self.table.scan(**scan_kwargs)
 			data.extend(response['Items'])
 			pages_processed += 1
 
